@@ -1,1 +1,1 @@
-{"id":"auto-pause-on-blur","name":"⏸ 離席自動一時停止","version":"1.0.0","type":"plugin","entry":"blur.js","author":"MusicRepeat","description":"ウィンドウがフォーカスを失ったら自動で一時停止(離席時の無駄な再生防止)"}
+{"id":"auto-pause-on-blur","name":"⏸ 離席自動一時停止","version":"1.0.0","type":"plugin","entry":"blur.js","author":"MusicRepeat","description":"ウィンドウがフォーカスを失ったら自動で一時停止し、戻ったら再開します。離席時の無駄な再生を防ぎます。再起動後に有効。"}

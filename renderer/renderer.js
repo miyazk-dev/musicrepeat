@@ -2474,17 +2474,26 @@ async function refreshInstalledAddons() {
 function renderInstalledAddons() {
   if (!addonOverlay) return;
   const box = addonOverlay.querySelector('#ad-installed');
+  const typeHint = {
+    theme: 'インストール済み → 配色が適用中。削除すれば元の配色に戻ります。',
+    plugin: 'インストール済み → アプリを再起動すると有効になります。',
+    ambient: 'インストール済み → 上級者タブの「環境音を混ぜる」セレクトから選べます。'
+  };
   if (addonItems.length === 0) {
     box.innerHTML = '<p class="remote-idle">まだインストール済みの拡張機能はありません。<br>上の「📥 配布一覧」からインストールしてみてください。</p>';
     return;
   }
   box.innerHTML = addonItems.map((a) => `
-    <div class="addon-row">
-      <div class="addon-info">
-        <b>${a.name}</b><span class="addon-ver">v${a.version || '?'}</span>
-        <div class="hint2">${ADDON_TYPE_LABEL[a.type] || a.type}${a.author ? ' / ' + a.author : ''}${a.description ? ' — ' + a.description : ''}</div>
+    <div class="addon-row" style="flex-direction:column;align-items:stretch;gap:4px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="addon-info" style="flex:1">
+          <b>${a.name}</b><span class="addon-ver">v${a.version || '?'}</span>
+          <div class="hint2">${ADDON_TYPE_LABEL[a.type] || a.type}${a.author ? ' / ' + a.author : ''}</div>
+        </div>
+        <button class="chip ad-del" data-id="${a.id}">削除</button>
       </div>
-      <button class="chip ad-del" data-id="${a.id}">削除</button>
+      ${a.description ? `<div class="hint2" style="margin-left:2px">💡 ${a.description}</div>` : ''}
+      <div class="hint2" style="margin-left:2px;color:var(--accent)">${typeHint[a.type] || ''}</div>
     </div>`).join('');
   for (const b of box.querySelectorAll('.ad-del')) {
     b.addEventListener('click', async () => {

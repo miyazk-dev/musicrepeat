@@ -1,1 +1,1 @@
-{"id":"rain-pack","name":"🌧 雨の音パック","version":"1.0.0","type":"ambient","ambient":[{"name":"🌧 雨(6秒ループ)","file":"rain.wav"}],"author":"MusicRepeat","description":"リアルタイム合成ではなく、録音風の雨音を環境音として追加します"}
+{"id":"rain-pack","name":"🌧 雨の音パック","version":"1.0.0","type":"ambient","ambient":[{"name":"🌧 雨(6秒ループ)","file":"rain.wav"}],"author":"MusicRepeat","description":"環境音ミキサーに雨音(6秒ループ)を追加します。上級者タブの「環境音を混ぜる」セレクトから選べます。"}

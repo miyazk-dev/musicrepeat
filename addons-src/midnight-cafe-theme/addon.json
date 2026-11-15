@@ -1,9 +1,1 @@
-{
-  "id": "midnight-cafe-theme",
-  "name": "🌙 ミッドナイトカフェテーマ",
-  "version": "1.0.0",
-  "type": "theme",
-  "entry": "theme.css",
-  "author": "MusicRepeat",
-  "description": "青系の落ち着いた夜カフェ配色に変えます"
-}
+{"id":"midnight-cafe-theme","name":"🌙 ミッドナイトカフェテーマ","version":"1.0.0","type":"theme","entry":"theme.css","author":"MusicRepeat","description":"配色を青系の夜カフェに変更します。インストールした瞬間に適用され、削除すれば元に戻ります。"}

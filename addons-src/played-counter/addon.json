@@ -1,1 +1,1 @@
-{"id":"played-counter","name":"🔢 再生回数カウンター","version":"1.0.0","type":"plugin","entry":"counter.js","author":"MusicRepeat","description":"再生した曲数をタイトルバー横に表示し、累計を保存します"}
+{"id":"played-counter","name":"🔢 再生回数カウンター","version":"1.0.0","type":"plugin","entry":"counter.js","author":"MusicRepeat","description":"再生した曲数をタイトル横に表示し、累計を保存します。再起動後に有効。"}

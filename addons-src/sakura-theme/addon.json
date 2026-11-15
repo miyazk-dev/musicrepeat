@@ -1,9 +1,1 @@
-{
-  "id": "sakura-theme",
-  "name": "🌸 桜テーマ",
-  "version": "1.0.0",
-  "type": "theme",
-  "entry": "theme.css",
-  "author": "MusicRepeat",
-  "description": "春らしい桜ピンクの配色に変えます"
-}
+{"id":"sakura-theme","name":"🌸 桜テーマ","version":"1.0.0","type":"theme","entry":"theme.css","author":"MusicRepeat","description":"配色を桜ピンクに変更します。インストールした瞬間に適用され、削除すれば元に戻ります。"}
