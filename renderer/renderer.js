@@ -2465,7 +2465,7 @@ function renderInstalledAddons() {
   if (!addonOverlay) return;
   const box = addonOverlay.querySelector('#ad-installed');
   if (addonItems.length === 0) {
-    box.innerHTML = '<p class="remote-idle">インストール済みの拡張機能はありません</p>';
+    box.innerHTML = '<p class="remote-idle">まだインストール済みの拡張機能はありません。<br>上の「📥 配布一覧」からインストールしてみてください。</p>';
     return;
   }
   box.innerHTML = addonItems.map((a) => `
@@ -2596,6 +2596,24 @@ function buildAddonOverlay() {
   addonOverlay.innerHTML = `
     <div class="help-card">
       <h2>🧩 拡張機能</h2>
+
+      <div class="addon-help">
+        <div class="addon-help-title">📖 使い方(3ステップ)</div>
+        <ol class="addon-help-steps">
+          <li><b>インストール</b>: 下の「📥 配布一覧」から気に入ったものを「インストール」ボタンで取得<br>
+            (または「📁 zipから追加」で手元のzipを選択)</li>
+          <li><b>適用</b>:
+            <ul>
+              <li>🎨 <b>テーマ</b> — インストールした瞬間に配色が切り替わります</li>
+              <li>⚙ <b>プラグイン</b> — アプリを一度閉じて再起動すると有効になります</li>
+              <li>🎧 <b>環境音</b> — 上級者タブの「環境音を混ぜる」セレクトに追加されます</li>
+            </ul>
+          </li>
+          <li><b>削除</b>: 「✅ インストール済み」の「削除」ボタン(元に戻ります)</li>
+        </ol>
+        <p class="hint2">※ アドオンは <code>%APPDATA%/MusicRepeat/addons/</code> に保存されます。「📂 保存先を開く」から確認できます。自作したい場合は <a href="#" id="ad-docs">docs/ADDONS.md</a> を参照。</p>
+      </div>
+
       <div class="st-sec-title">📥 配布一覧(GitHub Releases)</div>
       <div id="ad-market" class="addon-list"><p class="remote-idle">—</p></div>
       <div class="sched-actions" style="margin-top:6px">
@@ -2630,6 +2648,11 @@ function buildAddonOverlay() {
   });
   addonOverlay.querySelector('#ad-folder').addEventListener('click', () =>
     window.api.addonsOpenFolder());
+  const docsLink = addonOverlay.querySelector('#ad-docs');
+  if (docsLink) docsLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    window.open('https://github.com/miyazk-dev/musicrepeat/blob/master/docs/ADDONS.md', '_blank');
+  });
 }
 
 els.addons.addEventListener('click', () => {
