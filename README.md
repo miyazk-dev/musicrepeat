@@ -6,6 +6,20 @@
 
 ---
 
+## 📥 ダウンロード
+
+最新版は [**Releases ページ**](https://github.com/miyazk-dev/musicrepeat/releases/latest) から取得できます。
+
+| ファイル | 用途 |
+|---|---|
+| `MusicRepeat-Setup-x.x.x.exe` | インストーラー版(おすすめ) |
+| `MusicRepeat x.x.x.exe` | ポータブル版(インストール不要・USBメモリでも使える) |
+
+> ※ コード署名なしのため、初回起動時に Windows Defender SmartScreen の警告が出ることがあります。「詳細情報」→「実行」で起動してください。
+> ※ 新しいバージョンを公開するにはタグ `vX.Y.Z` をプッシュしてください(GitHub Actionsが自動でビルド&リリースします: `.github/workflows/release.yml`)
+
+---
+
 ## 🏪 店舗向け — 「一日中安心して放置できる」
 
 | 機能 | 説明 |
