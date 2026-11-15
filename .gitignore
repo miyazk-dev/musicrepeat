@@ -1,0 +1,22 @@
+# 依存パッケージ
+node_modules/
+
+# ビルド出力
+dist/
+dist2/
+dist3/
+dist4/
+dist5/
+dist6/
+dist7/
+
+# 同梱バイナリ (GitHub の 100MB 上限超過のため除外)
+# ユーザーは https://www.gyan.dev/ffmpeg/builds/ 等から入手して bin/ に置いてください
+bin/ffmpeg.exe
+bin/ffprobe.exe
+
+# OS / エディタ
+Thumbs.db
+Desktop.ini
+.DS_Store
+*.log

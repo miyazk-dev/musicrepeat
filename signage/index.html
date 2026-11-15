@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <title>MusicRepeat サイネージ</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="bg"></div>
+
+  <!-- スライド1: 店名+時計 -->
+  <section class="slide s-brand">
+    <div class="clock" id="clock">00:00</div>
+    <div class="store-name" id="store-name">MUSIC CAFE</div>
+    <div class="now-line"><span class="pulse"></span> NOW PLAYING <span id="now-title" class="now-title">—</span></div>
+  </section>
+
+  <!-- スライド2: 本日の一言 -->
+  <section class="slide s-msg">
+    <div class="slide-label">TODAY'S MESSAGE</div>
+    <div class="msg" id="today-msg">ようこそお越しくださいました</div>
+  </section>
+
+  <!-- スライド3: Wi-Fi -->
+  <section class="slide s-wifi">
+    <div class="slide-label">FREE Wi-Fi</div>
+    <div class="wifi-row">
+      <div class="wifi-info">
+        <div class="wifi-ssid" id="wifi-ssid">SSID</div>
+        <div class="wifi-pass" id="wifi-pass">password</div>
+      </div>
+      <img id="wifi-qr" class="qr" alt="Wi-Fi QR">
+    </div>
+  </section>
+
+  <!-- スライド4: SNS -->
+  <section class="slide s-sns">
+    <div class="slide-label">FOLLOW US</div>
+    <div class="wifi-row">
+      <img id="sns-qr" class="qr" alt="SNS QR">
+      <div class="wifi-info">
+        <div class="wifi-ssid" id="sns-url"></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="dots" id="dots"></div>
+  <button id="exit" title="閉じる(Esc)">✕</button>
+
+  <script src="app.js"></script>
+</body>
+</html>

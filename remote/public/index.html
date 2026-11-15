@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#14100e">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="リモコン">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <title>MusicRepeat リモコン</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header>
+    <span class="logo">♪</span><span>MusicRepeat リモコン</span>
+    <span id="conn" class="conn">接続中…</span>
+    <button id="install" class="conn install hidden" title="ホーム画面に追加">📲 アプリ追加</button>
+  </header>
+
+  <main>
+    <section class="now">
+      <div class="label">NOW PLAYING</div>
+      <h1 id="title">—</h1>
+      <div id="sub" class="sub"></div>
+      <div class="eqbars"><i></i><i></i><i></i><i></i><i></i></div>
+    </section>
+
+    <section class="controls">
+      <button id="prev" class="tbtn" title="前の曲">⏮</button>
+      <button id="play" class="playbtn" title="再生 / 一時停止">▶</button>
+      <button id="next" class="tbtn" title="次の曲">⏭</button>
+    </section>
+
+    <section class="vol">
+      <span class="vic">🔈</span>
+      <input id="vol" type="range" min="0" max="100" value="70">
+      <span class="vic">🔊</span>
+    </section>
+
+    <section class="presets" id="presets">
+      <button data-mode="off">オフ</button>
+      <button data-mode="cafe" class="on">☕ カフェ</button>
+      <button data-mode="relax">🌿 リラックス</button>
+      <button data-mode="clear">✨ クリア</button>
+    </section>
+
+    <section class="sleep">
+      <span class="sl">スリープ</span>
+      <button data-min="15">15分</button>
+      <button data-min="30">30分</button>
+      <button data-min="60">60分</button>
+      <button data-min="0">解除</button>
+      <span id="sleepinfo" class="sleepinfo"></span>
+    </section>
+
+    <section class="list">
+      <div class="listhead">曲一覧 <span id="count"></span></div>
+      <ul id="tracks"></ul>
+    </section>
+  </main>
+
+  <div id="sheet" class="sheet hidden">
+    <div class="sheet-title" id="sheet-name"></div>
+    <button id="q-next">⏭ 次に再生に追加</button>
+    <button id="q-req">🙋 リクエストする</button>
+    <button id="q-now">▶ 今すぐ再生</button>
+    <button id="q-cancel">キャンセル</button>
+  </div>
+  <div id="sheet-bg" class="sheet-bg hidden"></div>
+
+  <div id="auth">
+    <div class="auth-card">
+      <div class="auth-title">🏪 店員ログイン</div>
+      <p class="auth-hint">PCのリモコン画面に表示されている<br>6桁の店員コードを入力してください</p>
+      <input id="auth-code" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="●●●●●●">
+      <button id="auth-go">認証する</button>
+      <a id="auth-guest" href="/">→ お客さんモードで使う</a>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

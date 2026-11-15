@@ -1,0 +1,219 @@
+/* MusicRepeat スマホリモコン — カフェ風ダークUI */
+:root {
+  --bg: #14100e;
+  --card: #1d1713;
+  --border: rgba(255,255,255,.09);
+  --text: #f3e9dc;
+  --dim: rgba(243,233,220,.55);
+  --accent: #d9a06b;
+  --accent-soft: rgba(217,160,107,.16);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; }
+body {
+  background:
+    radial-gradient(700px 400px at 10% -10%, rgba(217,160,107,.12), transparent 60%),
+    var(--bg);
+  color: var(--text);
+  font-family: -apple-system, "Segoe UI", "Hiragino Sans", "Yu Gothic UI", sans-serif;
+  padding-bottom: 40px;
+}
+
+header {
+  position: sticky; top: 0; z-index: 10;
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 16px;
+  background: rgba(20,16,14,.92);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+  font-size: 14px; font-weight: 600;
+}
+.logo { color: var(--accent); font-size: 18px; }
+.conn {
+  margin-left: auto;
+  font-size: 11px; font-weight: 500; color: var(--dim);
+  padding: 3px 10px; border-radius: 999px;
+  border: 1px solid var(--border);
+}
+.conn.ok { color: #8fb8a5; border-color: rgba(143,184,165,.4); }
+.conn.ng { color: #e08b7c; border-color: rgba(224,139,124,.4); }
+.conn.install {
+  cursor: pointer; color: var(--accent);
+  border-color: rgba(217,160,107,.5); background: var(--accent-soft);
+}
+.hidden { display: none !important; }
+
+main { padding: 14px 16px; display: flex; flex-direction: column; gap: 14px; }
+
+/* NOW PLAYING */
+.now {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 16px; padding: 16px 18px;
+}
+.label { font-size: 10px; letter-spacing: .3em; color: var(--accent); margin-bottom: 6px; }
+#title { font-size: 18px; font-weight: 600; line-height: 1.4;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.sub { font-size: 12px; color: var(--dim); margin-top: 4px; min-height: 15px; }
+
+.eqbars { display: flex; gap: 4px; align-items: flex-end; height: 22px; margin-top: 12px; }
+.eqbars i { width: 5px; border-radius: 3px; background: linear-gradient(var(--accent), rgba(143,184,165,.5)); height: 6px; }
+body.playing .eqbars i { animation: b .9s ease-in-out infinite; }
+.eqbars i:nth-child(1) { animation-delay: 0s; }
+.eqbars i:nth-child(2) { animation-delay: .15s; }
+.eqbars i:nth-child(3) { animation-delay: .3s; }
+.eqbars i:nth-child(4) { animation-delay: .1s; }
+.eqbars i:nth-child(5) { animation-delay: .25s; }
+@keyframes b { 0%,100% { height: 5px; } 50% { height: 20px; } }
+
+/* 操作ボタン */
+.controls { display: flex; align-items: center; justify-content: center; gap: 20px; }
+.tbtn {
+  width: 54px; height: 54px; border-radius: 50%;
+  border: 1px solid var(--border); background: var(--card);
+  color: var(--text); font-size: 18px; cursor: pointer;
+}
+.tbtn:active { transform: scale(.93); }
+.playbtn {
+  width: 74px; height: 74px; border-radius: 50%; border: none;
+  background: linear-gradient(135deg, #e8c39a, var(--accent));
+  color: #1a1210; font-size: 26px; cursor: pointer;
+  box-shadow: 0 6px 24px rgba(217,160,107,.35);
+}
+.playbtn:active { transform: scale(.95); }
+
+/* 音量 */
+.vol { display: flex; align-items: center; gap: 10px; padding: 4px 6px; }
+.vic { font-size: 16px; opacity: .7; }
+input[type="range"] {
+  -webkit-appearance: none; flex: 1; height: 6px;
+  background: rgba(255,255,255,.14); border-radius: 3px; outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%;
+  background: var(--accent); box-shadow: 0 0 0 5px rgba(217,160,107,.18);
+}
+
+/* プリセット */
+.presets { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.presets button {
+  padding: 11px 8px; border-radius: 12px;
+  border: 1px solid var(--border); background: var(--card);
+  color: var(--dim); font-size: 13px; cursor: pointer;
+}
+.presets button.on { color: var(--accent); border-color: rgba(217,160,107,.5); background: var(--accent-soft); }
+
+/* スリープ */
+.sleep {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; padding: 10px 12px;
+}
+.sl { font-size: 12px; color: var(--dim); }
+.sleep button {
+  padding: 7px 12px; border-radius: 999px;
+  border: 1px solid var(--border); background: transparent;
+  color: var(--text); font-size: 12px; cursor: pointer;
+}
+.sleep button:active { background: var(--accent-soft); }
+.sleepinfo { font-size: 11px; color: var(--accent); margin-left: auto; }
+
+/* 曲一覧 */
+.list {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 16px; overflow: hidden;
+}
+.listhead {
+  padding: 12px 16px 10px; font-size: 12px; color: var(--dim);
+  letter-spacing: .15em; border-bottom: 1px solid var(--border);
+}
+#count { color: var(--accent); }
+#tracks { list-style: none; max-height: 46vh; overflow-y: auto; }
+#tracks li {
+  padding: 12px 16px; font-size: 13.5px; color: var(--dim);
+  border-bottom: 1px solid rgba(255,255,255,.04);
+  display: flex; align-items: center; gap: 10px; cursor: pointer;
+}
+#tracks li:last-child { border-bottom: none; }
+#tracks li.active { color: var(--accent); background: var(--accent-soft); }
+#tracks li .no { font-size: 11px; opacity: .6; min-width: 22px; text-align: right; }
+#tracks li span.n { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* アクションシート(長押し) */
+.sheet-bg { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 20; }
+.sheet {
+  position: fixed; left: 12px; right: 12px; bottom: 12px; z-index: 21;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 16px; padding: 10px; display: flex; flex-direction: column; gap: 6px;
+}
+.sheet-title {
+  font-size: 12px; color: var(--dim); padding: 6px 8px 8px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.sheet button {
+  padding: 13px; border-radius: 12px; border: none;
+  background: rgba(255,255,255,.05); color: var(--text); font-size: 14px; cursor: pointer;
+  text-align: left;
+}
+.sheet button:active { background: var(--accent-soft); }
+.hidden { display: none !important; }
+
+/* お客さんモード: 操作系を隠してリクエスト専用に */
+body.guest .controls,
+body.guest .vol,
+body.guest .presets,
+body.guest .sleep,
+body.guest #q-next,
+body.guest #q-now { display: none !important; }
+body.guest .now::after {
+  content: 'リクエストしたい曲をタップしてください';
+  display: block;
+  margin-top: 10px;
+  font-size: 12px;
+  color: rgba(217,160,107,.85);
+}
+/* リクエスト確認ボタンはお客さんモードのみ / 店員モードでは隠す */
+body:not(.guest) #q-req { display: none !important; }
+.role { cursor: pointer; color: var(--accent); }
+.req-mark { font-size: 13px; }
+#tracks li.req .n { opacity: .75; }
+
+/* トースト */
+.toast {
+  position: fixed; left: 50%; bottom: 60px; transform: translateX(-50%);
+  background: rgba(29,23,19,.95); color: var(--text);
+  border: 1px solid var(--border);
+  padding: 10px 18px; border-radius: 999px;
+  font-size: 13px; z-index: 30; max-width: 86vw;
+  box-shadow: 0 6px 24px rgba(0,0,0,.5);
+}
+
+/* 店員認証(6桁コード) */
+#auth {
+  position: fixed; inset: 0; z-index: 40;
+  display: none; align-items: center; justify-content: center;
+  background: rgba(10,8,7,.94);
+}
+body.authing #auth { display: flex; }
+.auth-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 16px; padding: 26px 22px;
+  display: flex; flex-direction: column; gap: 14px;
+  text-align: center; width: min(320px, 88vw);
+}
+.auth-title { font-size: 16px; font-weight: 600; color: var(--accent); }
+.auth-hint { font-size: 12px; color: var(--dim); line-height: 1.7; }
+#auth-code {
+  background: rgba(255,255,255,.06); border: 1px solid var(--border);
+  color: var(--text); border-radius: 12px; padding: 12px;
+  font-size: 22px; letter-spacing: .35em; text-align: center;
+  outline: none; width: 100%;
+}
+#auth-code::placeholder { color: rgba(243,233,220,.22); letter-spacing: .35em; }
+#auth-go {
+  padding: 12px; border-radius: 12px; border: none;
+  background: linear-gradient(135deg, #e8c39a, var(--accent));
+  color: #1a1210; font-size: 14px; font-weight: 600; cursor: pointer;
+}
+#auth-guest { font-size: 12px; color: var(--dim); }
+body.staff .eqbars i { background: linear-gradient(#8fb8a5, rgba(217,160,107,.5)); }
