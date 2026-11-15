@@ -1,0 +1,9 @@
+/* 🌊 オーシャンブルーテーマ */
+:root {
+  --bg: #0c1218;
+  --accent: #6fa8d8;
+  --accent-soft: rgba(111, 168, 216, 0.16);
+  --sage: #9dc4e4;
+  --text: #e6f0f8;
+  --text-dim: rgba(230, 240, 248, 0.55);
+}

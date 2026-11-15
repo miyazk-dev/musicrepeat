@@ -1,0 +1,9 @@
+/* 🌅 サンセットオレンジテーマ */
+:root {
+  --bg: #1a120e;
+  --accent: #e89a6b;
+  --accent-soft: rgba(232, 154, 107, 0.16);
+  --sage: #e4b898;
+  --text: #f8eee6;
+  --text-dim: rgba(248, 238, 230, 0.55);
+}

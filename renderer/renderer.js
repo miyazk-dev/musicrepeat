@@ -29,6 +29,7 @@ const els = {
   mono: $('mono'), fade: $('fade'),
   agct: $('agct'), agctVal: $('agct-val'),
   help: $('btn-help'), notes: $('btn-notes'),
+  announce: $('btn-announce'),
   addons: $('btn-addons'),
   remote: $('btn-remote'), sortBtn: $('btn-sort'),
   output: $('btn-output'),
@@ -1355,6 +1356,15 @@ els.notes.addEventListener('click', openNotes);
 /* ---------- リリースノート ---------- */
 const RELEASES = [
   {
+    v: '1.6.0', date: '2026-11-15',
+    items: [
+      ['🧩', '拡張機能(アドオン)システムを追加: テーマ/プラグイン/環境音をGitHub Releasesからワンクリック導入'],
+      ['🔒', 'PWAモード(HTTPS)を追加: スマホで「このアプリは現在使えません」が出る問題に対処'],
+      ['📱', 'Service Workerを強化: オフライン(PC未起動)でもアプリシェルが開くように'],
+      ['⚙', 'GitHub Actionsによる自動ビルド&リリースを整備(タグpushで自動公開)']
+    ]
+  },
+  {
     v: '1.5.4', date: '2026-11-15',
     items: [
       ['🔧', '店員ページ(/staff)が Not Found になる問題を修正'],
@@ -2544,7 +2554,10 @@ async function loadAddonMarket() {
   box.innerHTML = '<p class="remote-idle">読み込み中…</p>';
   let items = [];
   try {
-    const res = await fetch(ADDON_API, { headers: { Accept: 'application/vnd.github+json' } });
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 15000);
+    const res = await fetch(ADDON_API, { headers: { Accept: 'application/vnd.github+json' }, signal: ctrl.signal });
+    clearTimeout(t);
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const rels = await res.json();
     for (const r of rels) {
@@ -2555,7 +2568,8 @@ async function loadAddonMarket() {
       }
     }
   } catch (e) {
-    box.innerHTML = `<p class="remote-idle">一覧を取得できませんでした(${String((e && e.message) || e)})<br>オフライン時は「📁 zipから追加」をご利用ください。</p>`;
+    const msg = (e && e.name === 'AbortError') ? 'タイムアウト(15秒)' : String((e && e.message) || e);
+    box.innerHTML = `<p class="remote-idle">一覧を取得できませんでした(${msg})<br>ネットワークを確認するか「🔄 更新」で再試行してください。<br>オフライン時は「📁 zipから追加」をご利用ください。</p>`;
     return;
   }
   if (items.length === 0) {
@@ -2662,6 +2676,99 @@ els.addons.addEventListener('click', () => {
   helpOverlay.classList.remove('open');
   addonOverlay.classList.add('open');
 });
+
+/* ---------- お知らせ(運営からのお知らせ) ---------- *
+ * GitHub上の announcements.json を取得して表示する。
+ * 新着があれば起動時にバナーで通知する。 */
+const ANNOUNCE_URL = 'https://raw.githubusercontent.com/miyazk-dev/musicrepeat/master/announcements.json';
+let announceOverlay = null;
+let announcements = [];
+
+async function fetchAnnouncements() {
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 8000);
+    const res = await fetch(ANNOUNCE_URL, { signal: ctrl.signal, cache: 'no-store' });
+    clearTimeout(t);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
+}
+
+function buildAnnounceOverlay() {
+  announceOverlay = document.createElement('div');
+  announceOverlay.id = 'help-overlay';
+  announceOverlay.innerHTML = `
+    <div class="help-card">
+      <h2>📢 お知らせ</h2>
+      <div id="announce-body" class="addon-list"></div>
+      <button class="chip" id="announce-close" style="margin-top:12px">閉じる</button>
+    </div>`;
+  document.body.appendChild(announceOverlay);
+  announceOverlay.addEventListener('click', (e) => {
+    if (e.target === announceOverlay) announceOverlay.classList.remove('open');
+  });
+  announceOverlay.querySelector('#announce-close').addEventListener('click', () =>
+    announceOverlay.classList.remove('open'));
+}
+
+function renderAnnouncements() {
+  if (!announceOverlay) return;
+  const body = announceOverlay.querySelector('#announce-body');
+  if (announcements.length === 0) {
+    body.innerHTML = '<p class="remote-idle">お知らせはありません</p>';
+    return;
+  }
+  const typeIcon = { info: 'ℹ️', tip: '💡', warn: '⚠️', error: '🚨' };
+  body.innerHTML = announcements.map((a) => `
+    <div class="addon-row" style="flex-direction:column;align-items:flex-start;gap:4px">
+      <div style="display:flex;align-items:center;gap:6px;width:100%">
+        <span>${typeIcon[a.type] || '📢'}</span>
+        <b style="flex:1">${a.title || ''}</b>
+        <span class="hint2">${a.date || ''}</span>
+      </div>
+      <div class="hint2" style="margin-left:22px">${a.body || ''}</div>
+    </div>`).join('');
+}
+
+function showAnnounceBanner(ann) {
+  if (!ann) return;
+  const banner = document.createElement('div');
+  banner.className = 'announce-banner';
+  banner.innerHTML = `
+    <span class="announce-ic">${({ info: 'ℹ️', tip: '💡', warn: '⚠️', error: '🚨' })[ann.type] || '📢'}</span>
+    <span class="announce-text"><b>${ann.title}</b> — ${ann.body}</span>
+    <button class="announce-close" aria-label="閉じる">×</button>`;
+  document.body.appendChild(banner);
+  banner.querySelector('.announce-close').addEventListener('click', () => banner.remove());
+  setTimeout(() => { try { banner.remove(); } catch {} }, 12000);
+}
+
+els.announce.addEventListener('click', async () => {
+  if (!announceOverlay) buildAnnounceOverlay();
+  if (announcements.length === 0) announcements = await fetchAnnouncements();
+  renderAnnouncements();
+  helpOverlay.classList.remove('open');
+  announceOverlay.classList.add('open');
+});
+
+/* 起動時に新着お知らせをチェック */
+(async () => {
+  try {
+    const list = await fetchAnnouncements();
+    if (list.length === 0) return;
+    announcements = list;
+    const lastSeen = S.get('lastSeenAnnounce', '');
+    const newest = list[0];
+    if (newest && newest.id && newest.id !== lastSeen) {
+      S.set('lastSeenAnnounce', newest.id);
+      showAnnounceBanner(newest);
+    }
+  } catch {}
+})();
 
 /* ---------- 起動 ---------- */
 els.vol.value = vol;
