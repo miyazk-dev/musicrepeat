@@ -32,10 +32,13 @@ jobs:
           Copy-Item "ffmpeg-tmp/ffmpeg-8.0-essentials_build/bin/ffmpeg.exe" -Destination "bin/ffmpeg.exe"
 
       - name: Build
-        run: npm run dist
+        run: npm run dist -- --publish never
         env:
           # 署名なしでビルドする場合も electron-builder を通す
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
+
+      - name: Package addons
+        run: node scripts/package-addon.js
 
       - name: Release
         uses: softprops/action-gh-release@v2
@@ -47,3 +50,4 @@ jobs:
             dist/MusicRepeat-Setup-*.exe
             dist/MusicRepeat*.exe
             dist/latest.yml
+            dist/*.addon.zip
