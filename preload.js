@@ -20,11 +20,16 @@ contextBridge.exposeInMainWorld('api', {
   signageClose: () => ipcRenderer.send('signage:close'),
   signageUpdate: (msg) => ipcRenderer.send('signage:update', msg),
   onSignageData: (cb) => ipcRenderer.on('signage:data', (_e, msg) => cb(msg)),
-  remoteStart: (port) => ipcRenderer.invoke('remote:start', port),
+  remoteStart: (port, tls) => ipcRenderer.invoke('remote:start', port, tls),
   remoteStop: () => ipcRenderer.invoke('remote:stop'),
   sendRemoteState: (s) => ipcRenderer.send('remote:state', s),
   sendRemoteTracks: (t) => ipcRenderer.send('remote:tracks', t),
   onRemoteCommand: (cb) => ipcRenderer.on('remote:cmd', (_e, msg) => cb(msg)),
+  addonsList: () => ipcRenderer.invoke('addons:list'),
+  addonsInstallUrl: (url) => ipcRenderer.invoke('addons:installFromUrl', url),
+  addonsInstallZip: () => ipcRenderer.invoke('addons:installFromZip'),
+  addonsRemove: (id) => ipcRenderer.invoke('addons:remove', id),
+  addonsOpenFolder: () => ipcRenderer.invoke('addons:openFolder'),
   pathForFile: (file) => {
     try { return webUtils.getPathForFile(file); } catch { return null; }
   },

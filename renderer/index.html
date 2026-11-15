@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src blob:; script-src 'self'" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' addon:; img-src 'self' data: addon:; media-src blob: addon:; script-src 'self' addon:; connect-src 'self' addon: https://api.github.com https://github.com https://objects.githubusercontent.com" />
   <title>MusicRepeat</title>
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -249,6 +249,7 @@
             <div class="adv-foot">
               <button id="btn-help" class="chip">⌨ ショートカット一覧</button>
               <button id="btn-notes" class="chip">📜 更新情報</button>
+              <button id="btn-addons" class="chip">🧩 拡張機能</button>
               <span class="hint2">モードピルを長押しでも細かく調整できます</span>
             </div>
           </div>

@@ -1,13 +1,19 @@
-const { app, BrowserWindow, ipcMain, dialog, shell, session } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, session, protocol, net } = require('electron');
 const path = require('path');
 const os = require('os');
 const fsp = require('fs/promises');
 const fs = require('fs');
 const { spawn } = require('child_process');
+const { pathToFileURL } = require('url');
 const remote = require('./remote/remote-server');
 
 // 自動再生を許可(起動後すぐにBGMを流せるように)
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
+
+// addon:// スキーマ(rendererからアドオンのCSS/JS/音源を安全に読めるように)
+protocol.registerSchemesAsPrivileged([
+  { scheme: 'addon', privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true, corsEnabled: true } }
+]);
 
 const AUDIO_EXTS = ['.mp3', '.wav', '.ogg', '.oga', '.flac', '.m4a', '.aac', '.opus', '.webm'];
 
@@ -71,6 +77,26 @@ app.whenReady().then(() => {
     cb(permission === 'media');
   });
   session.defaultSession.setPermissionCheckHandler((_wc, permission) => permission === 'media');
+
+  // addon:// スキーマ → userData/addons/<id>/... のファイルを配信
+  protocol.handle('addon', (request) => {
+    try {
+      const u = new URL(request.url);
+      const id = u.hostname;
+      const rel = decodeURIComponent(u.pathname).replace(/^\/+/, '');
+      if (!id || !rel || !/^[a-zA-Z0-9._-]+$/.test(id)) {
+        return new Response('bad request', { status: 400 });
+      }
+      const p = path.resolve(addonsDir(), id, rel);
+      if (!p.startsWith(path.resolve(addonsDir()))) {
+        return new Response('forbidden', { status: 403 });
+      }
+      return net.fetch(pathToFileURL(p).toString());
+    } catch {
+      return new Response('not found', { status: 404 });
+    }
+  });
+
   createWindow();
 });
 app.on('window-all-closed', () => app.quit());
@@ -178,6 +204,155 @@ ipcMain.handle('file:read', async (_e, p) => {
 });
 
 ipcMain.handle('app:version', () => app.getVersion());
+
+/* ---------- 拡張機能(アドオン) ---------- *
+ * userData/addons/<id>/ に展開されたアドオンを管理。
+ * type: 'theme'(CSSを差し込む) / 'plugin'(JSを差し込む) / 'ambient'(環境音を追加) */
+
+function addonsDir() {
+  return path.join(app.getPath('userData'), 'addons');
+}
+
+const ADDON_TYPES = ['theme', 'plugin', 'ambient'];
+
+function validAddonId(id) {
+  return typeof id === 'string' && /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,63}$/.test(id);
+}
+
+async function listAddons() {
+  const base = addonsDir();
+  let entries;
+  try {
+    entries = await fsp.readdir(base, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+  const out = [];
+  for (const e of entries) {
+    if (!e.isDirectory() || !validAddonId(e.name)) continue;
+    try {
+      const mf = JSON.parse(await fsp.readFile(path.join(base, e.name, 'addon.json'), 'utf8'));
+      if (!ADDON_TYPES.includes(mf.type)) continue;
+      out.push({
+        id: e.name,
+        name: mf.name || e.name,
+        version: mf.version || '',
+        type: mf.type,
+        description: mf.description || '',
+        author: mf.author || '',
+        entry: mf.entry || '',
+        ambient: Array.isArray(mf.ambient) ? mf.ambient : []
+      });
+    } catch {}
+  }
+  return out;
+}
+
+/* zipを一時フォルダーに展開し、addon.json を含むルートを探す */
+async function extractAddonZip(zipPath) {
+  const dest = path.join(os.tmpdir(), `mr-addon-x-${Date.now()}-${Math.floor(Math.random() * 1e6)}`);
+  await fsp.mkdir(dest, { recursive: true });
+  const code = await new Promise((resolve) => {
+    const ps = spawn('powershell.exe', [
+      '-NoProfile', '-NonInteractive', '-Command',
+      `Expand-Archive -LiteralPath '${zipPath.replace(/'/g, "''")}' -DestinationPath '${dest.replace(/'/g, "''")}' -Force`
+    ], { windowsHide: true });
+    ps.on('error', () => resolve(1));
+    ps.on('close', (c) => resolve(c));
+  });
+  if (code !== 0) {
+    await fsp.rm(dest, { recursive: true, force: true });
+    throw new Error('zipの展開に失敗しました(PowerShell)');
+  }
+  // addon.json を探す(zipのルート直下 or 1階層のフォルダー内)
+  let base = dest;
+  const walkJson = async (dir, depth) => {
+    if (depth > 2) return null;
+    let items;
+    try { items = await fsp.readdir(dir, { withFileTypes: true }); } catch { return null; }
+    for (const it of items) {
+      if (it.isFile() && it.name === 'addon.json') return dir;
+    }
+    for (const it of items) {
+      if (it.isDirectory()) {
+        const r = await walkJson(path.join(dir, it.name), depth + 1);
+        if (r) return r;
+      }
+    }
+    return null;
+  };
+  const found = await walkJson(dest, 0);
+  if (!found) {
+    await fsp.rm(dest, { recursive: true, force: true });
+    throw new Error('addon.json が見つかりません(アドオンの形式が違います)');
+  }
+  return { dest, base: found };
+}
+
+async function installAddonFromZip(zipPath) {
+  const { dest, base } = await extractAddonZip(zipPath);
+  try {
+    const mf = JSON.parse(await fsp.readFile(path.join(base, 'addon.json'), 'utf8'));
+    if (!validAddonId(mf.id)) throw new Error('アドオンのidが不正です');
+    if (!ADDON_TYPES.includes(mf.type)) throw new Error(`未対応の種類です: ${mf.type}`);
+
+    // 参照先のファイルが本当に存在し、フォルダー外へ逃げないか検証
+    const refs = [];
+    if (mf.entry) refs.push(mf.entry);
+    for (const a of mf.ambient || []) refs.push(a.file);
+    for (const r of refs.filter(Boolean)) {
+      const p = path.resolve(base, r);
+      if (!p.startsWith(path.resolve(base))) throw new Error(`不正なパス: ${r}`);
+      try { await fsp.access(p); } catch { throw new Error(`ファイルがありません: ${r}`); }
+    }
+
+    const target = path.join(addonsDir(), mf.id);
+    await fsp.mkdir(addonsDir(), { recursive: true });
+    await fsp.rm(target, { recursive: true, force: true });   // 同じidは上書き
+    await fsp.cp(base, target, { recursive: true });
+    return { id: mf.id, name: mf.name || mf.id, version: mf.version || '', type: mf.type, description: mf.description || '', author: mf.author || '' };
+  } finally {
+    await fsp.rm(dest, { recursive: true, force: true });
+  }
+}
+
+ipcMain.handle('addons:list', () => listAddons());
+
+ipcMain.handle('addons:installFromUrl', async (_e, url) => {
+  if (!/^https:\/\/[^\s]+$/.test(String(url || ''))) throw new Error('httpsのURLのみ受け付けます');
+  const res = await fetch(url, { signal: AbortSignal.timeout(120000) });
+  if (!res.ok) throw new Error(`ダウンロード失敗 (HTTP ${res.status})`);
+  const buf = Buffer.from(await res.arrayBuffer());
+  const tmp = path.join(os.tmpdir(), `mr-addon-d-${Date.now()}.zip`);
+  await fsp.writeFile(tmp, buf);
+  try {
+    return await installAddonFromZip(tmp);
+  } finally {
+    try { await fsp.unlink(tmp); } catch {}
+  }
+});
+
+ipcMain.handle('addons:installFromZip', async () => {
+  const res = await dialog.showOpenDialog(win, {
+    title: 'アドオン(zip)を選択',
+    properties: ['openFile'],
+    filters: [{ name: 'アドオン', extensions: ['zip'] }]
+  });
+  if (res.canceled || res.filePaths.length === 0) return null;
+  return await installAddonFromZip(res.filePaths[0]);
+});
+
+ipcMain.handle('addons:remove', async (_e, id) => {
+  if (!validAddonId(id)) throw new Error('不正なidです');
+  await fsp.rm(path.join(addonsDir(), id), { recursive: true, force: true });
+  return true;
+});
+
+ipcMain.handle('addons:openFolder', async () => {
+  await fsp.mkdir(addonsDir(), { recursive: true });
+  shell.openPath(addonsDir());
+  return true;
+});
 
 /* ---------- FFmpeg による変換(直接再生できないファイルの救済) ---------- */
 
@@ -303,10 +478,10 @@ ipcMain.handle('dialog:pickAudioFile', async () => {
 
 /* ---------- スマホリモコン(ローカルサーバー) ---------- */
 
-ipcMain.handle('remote:start', async (_e, port) => {
+ipcMain.handle('remote:start', async (_e, port, tls) => {
   return await remote.start(port || 8080, (msg) => {
     if (win && !win.isDestroyed()) win.webContents.send('remote:cmd', msg);
-  });
+  }, { tls: !!tls });
 });
 
 ipcMain.handle('remote:stop', () => remote.stop());

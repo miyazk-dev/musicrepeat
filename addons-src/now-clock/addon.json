@@ -1,0 +1,9 @@
+{
+  "id": "now-clock",
+  "name": "🕐 デスククロック",
+  "version": "1.0.0",
+  "type": "plugin",
+  "entry": "clock.js",
+  "author": "MusicRepeat",
+  "description": "画面右下に現在時刻を常時表示します(全画面・サイネージ運用向け)"
+}

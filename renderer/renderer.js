@@ -29,6 +29,7 @@ const els = {
   mono: $('mono'), fade: $('fade'),
   agct: $('agct'), agctVal: $('agct-val'),
   help: $('btn-help'), notes: $('btn-notes'),
+  addons: $('btn-addons'),
   remote: $('btn-remote'), sortBtn: $('btn-sort'),
   output: $('btn-output'),
   ambSel: $('amb-sel'), amb: $('amb'), ambVal: $('amb-val'),
@@ -328,6 +329,20 @@ function applyAmbient() {
     } else if (ambAudio.src) {
       ambAudio.play().catch(() => {});
     }
+    return;
+  }
+
+  // アドオン提供の環境音(addon://<id>/<ファイル> をそのまま鳴らす)
+  if (ambientKind.startsWith('addon://')) {
+    ambFilter.type = 'allpass';
+    ambFilter.frequency.value = 8000;
+    ambFilter.Q.value = 1;
+    if (!ambElSrc) {
+      ambElSrc = ctx.createMediaElementSource(ambAudio);
+      ambElSrc.connect(ambFilter);
+    }
+    if (ambAudio.getAttribute('src') !== ambientKind) ambAudio.src = ambientKind;
+    ambAudio.play().catch(() => {});
     return;
   }
 
@@ -1650,6 +1665,9 @@ function buildRemoteOverlay() {
       <div class="remote-start">
         <span class="rs-label">ポート</span>
         <input id="remote-port" type="number" value="8080" min="1024" max="65535">
+        <label class="rs-label" title="オンにするとhttpsで配信し、スマホに正規のPWAとしてインストールできます(初回のみスマホにCA証明書のインストールが必要)">
+          <input id="remote-tls" type="checkbox" style="vertical-align:middle"> 🔒 PWAモード(HTTPS)
+        </label>
         <button id="remote-begin" class="chip">サーバーを開始</button>
       </div>
       <div id="remote-body" class="remote-body"></div>
@@ -1664,20 +1682,24 @@ function buildRemoteOverlay() {
 
   remoteOverlay.querySelector('#remote-begin').addEventListener('click', async () => {
     const port = +remoteOverlay.querySelector('#remote-port').value || 8080;
+    const tls = remoteOverlay.querySelector('#remote-tls').checked;
     const btn = remoteOverlay.querySelector('#remote-begin');
     btn.disabled = true; btn.textContent = '起動中…';
-    const info = await window.api.remoteStart(port);
+    const info = await window.api.remoteStart(port, tls);
     btn.disabled = false; btn.textContent = 'サーバーを開始';
     if (!info) { toast('空きポートが見つかりませんでした'); return; }
     remoteActive = true;
     lastRemoteInfo = info;
     S.set('remoteOn', true);
     S.set('remotePort', info.port);
+    S.set('remoteTls', tls);
     pushRemoteState();
     pushRemoteTracks();
     renderRemoteBody();
-    toast('リモコンサーバーを起動しました(次回起動時から自動で開きます)');
+    toast(tls && info.tlsPort ? 'リモコンサーバーを起動しました(HTTPS/PWAモード)' : 'リモコンサーバーを起動しました(次回起動時から自動で開きます)');
   });
+  // 既定値の復元
+  remoteOverlay.querySelector('#remote-tls').checked = S.get('remoteTls', false);
 }
 
 function renderRemoteBody() {
@@ -1701,6 +1723,22 @@ function renderRemoteBody() {
         </figure>
       </div>
       <div class="remote-urls">${urls}</div>
+      ${lastRemoteInfo.tlsPort ? `
+      <div class="pwa-guide">
+        <div class="st-sec-title">📲 PWAとしてインストール(初回のみスマホに証明書が必要)</div>
+        <ol class="pwa-steps">
+          <li>スマホで<b>CA証明書QR</b>を読み取り、証明書をダウンロード</li>
+          <li><b>Android</b>: 設定 → セキュリティ → 「証明書のインストール」→ CA証明書 → ダウンロードしたファイル<br><b>iPhone</b>: Safariで開いて「プロファイルをインストール」→ 設定で信頼</li>
+          <li>上のQRをもう一度読み取り → Chromeメニューの「<b>インストール</b>」(「このアプリは現在使えません」が出なくなり、オフラインでもアイコンから起動できます)</li>
+        </ol>
+        <div class="remote-qr2col">
+          ${lastRemoteInfo.qrCert ? `
+          <figure class="remote-qrbox">
+            <figcaption>🔐 CA証明書のダウンロード</figcaption>
+            <img class="remote-qr" src="${lastRemoteInfo.qrCert}" alt="CA証明書QR">
+          </figure>` : ''}
+        </div>
+      </div>` : (lastRemoteInfo.tlsRequested ? '<p class="remote-idle">⚠ HTTPS証明書を用意できませんでした(HTTPのみで起動しています)</p>' : '')}
       <button id="remote-stop" class="chip" style="margin-top:10px">サーバーを停止</button>`;
     body.querySelector('#remote-stop').addEventListener('click', async () => {
       await window.api.remoteStop();
@@ -2409,6 +2447,199 @@ els.pomo.addEventListener('click', () => {
   pomoOverlay.classList.add('open');
 });
 
+/* ---------- 拡張機能(アドオン) ---------- *
+ * theme = CSS差し込み / plugin = JS差し込み / ambient = 環境音の追加。
+ * 配布は GitHub Releases の *.addon.zip。アプリ内からワンクリック導入できる。 */
+const ADDON_API = 'https://api.github.com/repos/miyazk-dev/musicrepeat/releases?per_page=10';
+const ADDON_TYPE_LABEL = { theme: '🎨 テーマ', plugin: '⚙ プラグイン', ambient: '🎧 環境音' };
+let addonOverlay = null;
+let addonItems = [];        // インストール済み(listAddonsの戻り値)
+let addonPluginsDone = false;
+
+async function refreshInstalledAddons() {
+  try { addonItems = (await window.api.addonsList()) || []; } catch { addonItems = []; }
+  renderInstalledAddons();
+}
+
+function renderInstalledAddons() {
+  if (!addonOverlay) return;
+  const box = addonOverlay.querySelector('#ad-installed');
+  if (addonItems.length === 0) {
+    box.innerHTML = '<p class="remote-idle">インストール済みの拡張機能はありません</p>';
+    return;
+  }
+  box.innerHTML = addonItems.map((a) => `
+    <div class="addon-row">
+      <div class="addon-info">
+        <b>${a.name}</b><span class="addon-ver">v${a.version || '?'}</span>
+        <div class="hint2">${ADDON_TYPE_LABEL[a.type] || a.type}${a.author ? ' / ' + a.author : ''}${a.description ? ' — ' + a.description : ''}</div>
+      </div>
+      <button class="chip ad-del" data-id="${a.id}">削除</button>
+    </div>`).join('');
+  for (const b of box.querySelectorAll('.ad-del')) {
+    b.addEventListener('click', async () => {
+      if (!confirm(`拡張機能「${b.dataset.id}」を削除しますか?`)) return;
+      await window.api.addonsRemove(b.dataset.id);
+      await refreshInstalledAddons();
+      await applyAddons(true);
+      populateAddonAmbients();
+      toast('拡張機能を削除しました');
+    });
+  }
+}
+
+/* テーマ(<link>)とプラグイン(<script>)の差し込み。起動時と導入後に呼ぶ */
+async function applyAddons(reapply) {
+  try { addonItems = (await window.api.addonsList()) || []; } catch { return; }
+  for (const a of addonItems) {
+    if (a.type === 'theme' && a.entry) {
+      const old = document.querySelector(`link[data-addon="${a.id}"]`);
+      if (old) old.remove();
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = `addon://${a.id}/${a.entry}`;
+      link.dataset.addon = a.id;
+      document.head.appendChild(link);
+    }
+    // プラグインは起動時の1回だけ(導入後は再起動で有効)
+    if (a.type === 'plugin' && a.entry && !addonPluginsDone && !reapply) {
+      const s = document.createElement('script');
+      s.src = `addon://${a.id}/${a.entry}`;
+      s.dataset.addon = a.id;
+      document.body.appendChild(s);
+    }
+  }
+  addonPluginsDone = true;
+}
+
+/* 環境音セレクトにアドオンの音源を追加する */
+function populateAddonAmbients() {
+  for (const opt of [...els.ambSel.options]) {
+    if (opt.value.startsWith('addon://')) opt.remove();
+  }
+  for (const a of addonItems) {
+    for (const e of (a.ambient || [])) {
+      if (!e || !e.file) continue;
+      const opt = document.createElement('option');
+      const val = `addon://${a.id}/${e.file}`;
+      opt.value = val;
+      opt.textContent = `🧩 ${e.name || e.file}(${a.name})`;
+      els.ambSel.appendChild(opt);
+    }
+  }
+  // 削除済みアドオンの環境音が選ばれていたらリセット
+  if (ambientKind.startsWith('addon://') &&
+      !els.ambSel.querySelector(`option[value="${CSS.escape(ambientKind)}"]`)) {
+    ambientKind = 'none';
+    S.set('ambient', 'none');
+    els.ambSel.value = 'none';
+    els.ambFileRow.classList.add('hidden');
+  }
+}
+
+/* 配布一覧(GitHub Releasesの *.addon.zip)を取得して表示 */
+async function loadAddonMarket() {
+  if (!addonOverlay) return;
+  const box = addonOverlay.querySelector('#ad-market');
+  box.innerHTML = '<p class="remote-idle">読み込み中…</p>';
+  let items = [];
+  try {
+    const res = await fetch(ADDON_API, { headers: { Accept: 'application/vnd.github+json' } });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const rels = await res.json();
+    for (const r of rels) {
+      for (const a of (r.assets || [])) {
+        if (a.name.endsWith('.addon.zip')) {
+          items.push({ url: a.browser_download_url, name: a.name, size: a.size, tag: r.tag_name });
+        }
+      }
+    }
+  } catch (e) {
+    box.innerHTML = `<p class="remote-idle">一覧を取得できませんでした(${String((e && e.message) || e)})<br>オフライン時は「📁 zipから追加」をご利用ください。</p>`;
+    return;
+  }
+  if (items.length === 0) {
+    box.innerHTML = '<p class="remote-idle">配布中の拡張機能はまだありません</p>';
+    return;
+  }
+  box.innerHTML = items.map((it, i) => `
+    <div class="addon-row">
+      <div class="addon-info">
+        <b>${it.name.replace(/\.addon\.zip$/, '')}</b>
+        <div class="hint2">${it.tag} ・ ${(it.size / 1024).toFixed(0)} KB</div>
+      </div>
+      <button class="chip ad-inst" data-i="${i}">インストール</button>
+    </div>`).join('');
+  for (const b of box.querySelectorAll('.ad-inst')) {
+    b.addEventListener('click', async () => {
+      const it = items[+b.dataset.i];
+      b.disabled = true; b.textContent = '取得中…';
+      try {
+        const mf = await window.api.addonsInstallUrl(it.url);
+        b.textContent = '✓ 完了';
+        await refreshInstalledAddons();
+        await applyAddons(true);
+        populateAddonAmbients();
+        if (mf && mf.type === 'plugin') toast(`「${mf.name}」を追加しました(再起動後に有効)`);
+        else if (mf) toast(`「${mf.name}」を追加しました`);
+      } catch (e) {
+        b.disabled = false; b.textContent = 'インストール';
+        toast('⚠ ' + String((e && e.message) || e));
+      }
+    });
+  }
+}
+
+function buildAddonOverlay() {
+  addonOverlay = document.createElement('div');
+  addonOverlay.id = 'help-overlay';
+  addonOverlay.innerHTML = `
+    <div class="help-card">
+      <h2>🧩 拡張機能</h2>
+      <div class="st-sec-title">📥 配布一覧(GitHub Releases)</div>
+      <div id="ad-market" class="addon-list"><p class="remote-idle">—</p></div>
+      <div class="sched-actions" style="margin-top:6px">
+        <button id="ad-reload" class="chip">🔄 更新</button>
+        <button id="ad-local" class="chip">📁 zipから追加</button>
+        <button id="ad-folder" class="chip">📂 保存先を開く</button>
+      </div>
+      <div class="adv-sep"></div>
+      <div class="st-sec-title">✅ インストール済み</div>
+      <div id="ad-installed" class="addon-list"></div>
+      <button class="chip" id="ad-close" style="margin-top:12px">閉じる</button>
+    </div>`;
+  document.body.appendChild(addonOverlay);
+  addonOverlay.addEventListener('click', (e) => {
+    if (e.target === addonOverlay) addonOverlay.classList.remove('open');
+  });
+  addonOverlay.querySelector('#ad-close').addEventListener('click', () =>
+    addonOverlay.classList.remove('open'));
+  addonOverlay.querySelector('#ad-reload').addEventListener('click', loadAddonMarket);
+  addonOverlay.querySelector('#ad-local').addEventListener('click', async () => {
+    try {
+      const mf = await window.api.addonsInstallZip();
+      if (!mf) return;
+      await refreshInstalledAddons();
+      await applyAddons(true);
+      populateAddonAmbients();
+      if (mf.type === 'plugin') toast(`「${mf.name}」を追加しました(再起動後に有効)`);
+      else toast(`「${mf.name}」を追加しました`);
+    } catch (e) {
+      toast('⚠ ' + String((e && e.message) || e));
+    }
+  });
+  addonOverlay.querySelector('#ad-folder').addEventListener('click', () =>
+    window.api.addonsOpenFolder());
+}
+
+els.addons.addEventListener('click', () => {
+  if (!addonOverlay) buildAddonOverlay();
+  renderInstalledAddons();
+  loadAddonMarket();
+  helpOverlay.classList.remove('open');
+  addonOverlay.classList.add('open');
+});
+
 /* ---------- 起動 ---------- */
 els.vol.value = vol;
 els.calm.value = calm;
@@ -2441,9 +2672,16 @@ pomoLabel();
 /* 出力デバイス復元(権限取得後にラベル付き一覧を取得) */
 ensureMediaLabels().then(() => refreshOutputs()).then(() => applySink());
 
+/* 拡張機能の復元(環境音の選択肢 → テーマ/プラグインの差し込み) */
+window.api.addonsList().then((list) => {
+  addonItems = list || [];
+  populateAddonAmbients();
+  applyAddons(false);
+}).catch(() => {});
+
 /* リモコンサーバーの自動再開(前回起動していた場合) */
 if (S.get('remoteOn', false)) {
-  window.api.remoteStart(S.get('remotePort', 8080)).then((info) => {
+  window.api.remoteStart(S.get('remotePort', 8080), S.get('remoteTls', false)).then((info) => {
     if (info) {
       remoteActive = true;
       lastRemoteInfo = info;

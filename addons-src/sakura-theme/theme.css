@@ -1,0 +1,9 @@
+/* 🌸 桜テーマ — 桜ピンクの春配色 */
+:root {
+  --bg: #1a1214;
+  --accent: #e8a0b4;
+  --accent-soft: rgba(232, 160, 180, 0.16);
+  --sage: #d8b8c8;
+  --text: #f7ecef;
+  --text-dim: rgba(247, 236, 239, 0.55);
+}

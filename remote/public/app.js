@@ -68,13 +68,21 @@ window.addEventListener('appinstalled', () => {
   deferredPrompt = null;
 });
 
+let wsFailCount = 0;
 function connect() {
   const proto = location.protocol === 'https:' ? 'wss://' : 'ws://';
   const authQ = (isStaffPage && staffToken) ? `?auth=${encodeURIComponent(staffToken)}` : '';
   ws = new WebSocket(proto + location.host + '/ws' + authQ);
-  ws.onopen = () => { $('conn').textContent = '接続中'; $('conn').className = 'conn ok'; };
+  ws.onopen = () => {
+    wsFailCount = 0;
+    $('conn').textContent = '接続中';
+    $('conn').className = 'conn ok';
+  };
   ws.onclose = () => {
-    $('conn').textContent = '切断 — 再接続中…';
+    wsFailCount++;
+    $('conn').textContent = wsFailCount >= 5
+      ? 'PC未起動? — 再接続中…'
+      : '切断 — 再接続中…';
     $('conn').className = 'conn ng';
     setTimeout(connect, 2000);
   };
